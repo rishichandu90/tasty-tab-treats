@@ -9,11 +9,15 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-const AdminForm: React.FC = () => {
+interface AdminFormProps {
+  defaultAdmin?: Admin;
+}
+
+const AdminForm: React.FC<AdminFormProps> = ({ defaultAdmin }) => {
   const { addFoodItem } = useFoodContext();
   const [foodName, setFoodName] = useState('');
   const [vibe, setVibe] = useState('');
-  const [admin, setAdmin] = useState<Admin | ''>('');
+  const [admin, setAdmin] = useState<Admin | ''>(defaultAdmin || '');
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -94,23 +98,25 @@ const AdminForm: React.FC = () => {
             />
           </div>
           
-          <div className="space-y-2">
-            <Label htmlFor="admin">Admin</Label>
-            <Select
-              value={admin}
-              onValueChange={(value) => setAdmin(value as Admin)}
-              required
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select who you are" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Rishi">Rishi</SelectItem>
-                <SelectItem value="Atthamma">Atthamma</SelectItem>
-                <SelectItem value="Amma">Amma</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {!defaultAdmin && (
+            <div className="space-y-2">
+              <Label htmlFor="admin">Admin</Label>
+              <Select
+                value={admin}
+                onValueChange={(value) => setAdmin(value as Admin)}
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select who you are" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Rishi">Rishi</SelectItem>
+                  <SelectItem value="Atthamma">Atthamma</SelectItem>
+                  <SelectItem value="Amma">Amma</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           
           <div className="space-y-2">
             <Label htmlFor="image">Food Image</Label>
@@ -136,7 +142,7 @@ const AdminForm: React.FC = () => {
           <Button 
             type="submit" 
             className="w-full mt-4 bg-food-orange hover:bg-food-orange/90" 
-            disabled={isSubmitting || !foodName || !vibe || !admin}
+            disabled={isSubmitting || !foodName || !vibe || (!defaultAdmin && !admin)}
           >
             {isSubmitting ? 'Adding...' : 'Add Food Item'}
           </Button>
