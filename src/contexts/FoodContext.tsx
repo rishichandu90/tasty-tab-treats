@@ -1,6 +1,8 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { FoodItem, Admin } from '@/types/food';
 import { useToast } from '@/components/ui/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface FoodContextType {
   foodItems: FoodItem[];
@@ -13,42 +15,96 @@ const FoodContext = createContext<FoodContextType | undefined>(undefined);
 
 export const FoodProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [foodItems, setFoodItems] = useState<FoodItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  // Load from localStorage on init
+  // Fetch food items from Supabase on component mount
   useEffect(() => {
-    const storedItems = localStorage.getItem('foodItems');
-    if (storedItems) {
+    const fetchFoodItems = async () => {
       try {
-        const parsedItems = JSON.parse(storedItems);
-        setFoodItems(parsedItems);
+        setLoading(true);
+        const { data, error } = await supabase
+          .from('food_items')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Error fetching food items:', error);
+          toast({
+            title: "Error",
+            description: "Failed to load food items. Please try again later.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        if (data) {
+          setFoodItems(data as FoodItem[]);
+        }
       } catch (error) {
-        console.error('Failed to parse stored food items:', error);
-        setFoodItems([]); // Set to empty array if parsing fails
+        console.error('Unexpected error:', error);
+      } finally {
+        setLoading(false);
       }
-    } else {
-      // If no stored items, start with an empty array
-      setFoodItems([]);
-    }
-  }, []);
+    };
 
-  // Save to localStorage when items change
-  useEffect(() => {
-    localStorage.setItem('foodItems', JSON.stringify(foodItems));
-  }, [foodItems]);
+    fetchFoodItems();
 
-  const addFoodItem = (item: Omit<FoodItem, 'id' | 'date'>) => {
-    const newItem: FoodItem = {
+    // Set up real-time subscription
+    const channel = supabase
+      .channel('public:food_items')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'food_items' 
+      }, (payload) => {
+        console.log('Change received!', payload);
+        fetchFoodItems();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [toast]);
+
+  const addFoodItem = async (item: Omit<FoodItem, 'id' | 'date'>) => {
+    const newItem: Omit<FoodItem, 'id'> = {
       ...item,
-      id: Date.now().toString(),
       date: new Date().toISOString().split('T')[0] // Format: YYYY-MM-DD
     };
 
-    setFoodItems(prev => [newItem, ...prev]);
-    toast({
-      title: "Success!",
-      description: `${item.name} has been added to the collection.`,
-    });
+    try {
+      const { data, error } = await supabase
+        .from('food_items')
+        .insert([newItem])
+        .select();
+
+      if (error) {
+        console.error('Error adding food item:', error);
+        toast({
+          title: "Error",
+          description: "Failed to add food item. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (data) {
+        // No need to update state manually since we're using real-time subscription
+        toast({
+          title: "Success!",
+          description: `${item.name} has been added to the collection.`,
+        });
+      }
+    } catch (error) {
+      console.error('Unexpected error:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const getFoodItemsByAdmin = (admin: Admin) => {
