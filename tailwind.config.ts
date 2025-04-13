@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,7 +62,14 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
-				}
+				},
+				// Food theme colors
+				'food-orange': '#F97316',
+				'food-orange-light': '#FDBA74',
+				'food-yellow': '#FBBF24',
+				'food-brown': '#92400E',
+				'food-cream': '#FEF3C7',
+				'food-green': '#84CC16',
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
@@ -89,6 +97,10 @@ export default {
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out'
+			},
+			fontFamily: {
+				'display': ['Playfair Display', 'serif'],
+				'body': ['Inter', 'sans-serif'],
 			}
 		}
 	},
